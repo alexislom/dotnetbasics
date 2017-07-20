@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Text;
@@ -20,7 +20,7 @@ namespace CancellingTasks
                 "http://www.albahari.com/threading/",
                 "http://jonskeet.uk/csharp/threads/",
                 // TODO Uncomment after completing the task.
-                // "http://asd234efwdw23reefsfdsfds.com",
+                "http://asd234efwdw23reefsfdsfds.com",
                 "https://codewala.net/2015/07/29/concurrency-vs-multi-threading-vs-asynchronous-programming-explained/",
             };
 
@@ -28,6 +28,7 @@ namespace CancellingTasks
             var ct = cts.Token;
 
             // TODO Create a new task with cancellation token and queue it.
+            var task = Task.Factory.StartNew(()=>
             {
                 Console.WriteLine("Task is started.");
 
@@ -42,14 +43,16 @@ namespace CancellingTasks
                     var bytes = webClient.DownloadData(url);
 
                     // TODO Cancel the task.
+                    cts.Cancel();
 
                     var resultString = Encoding.UTF8.GetString(bytes);
-
+                    cts.Cancel();
                     // TODO Cancel the task.
 
                     var occurences = IndexesOf(resultString, Token).Length;
                     list.Add(Tuple.Create(url, occurences));
 
+                    cts.Cancel();
                     // TODO Cancel the task.
 
                     Task.Delay(100);
@@ -58,9 +61,10 @@ namespace CancellingTasks
                 Console.WriteLine("Task is completed.");
 
                 // TODO Set task result in list.ToArray().
-            };
+            },ct);
 
             // TODO Run the block below if the task completed successfully.
+            task.ContinueWith(prev=>
             {
                 Console.WriteLine("Task completed successfully.");
 
@@ -73,21 +77,23 @@ namespace CancellingTasks
                     Console.WriteLine("{0} - {1}", tuple.Item1, tuple.Item2);
                 }
 
-            };
+            },ct, TaskContinuationOptions.OnlyOnRanToCompletion, TaskScheduler.Current);
 
             // TODO Run the block below if the task was cancelled.
+            task.ContinueWith(prev=>
             {
                 Console.WriteLine("Task was cancelled.");
-            };
+            }, ct, TaskContinuationOptions.OnlyOnCanceled, TaskScheduler.Current);
 
             // TODO Run the block below if the task failed.
+            task.ContinueWith(prev=>
             {
-                string exceptionMessage = string.Empty;
+                string exceptionMessage = prev.Exception.ToString();
 
                 // TODO Set exceptionMessage in inner exception's message.
 
                 Console.WriteLine("Task failed with an exception: {0}", exceptionMessage);
-            };
+            }, ct, TaskContinuationOptions.OnlyOnCanceled, TaskScheduler.Current);
 
 
             Console.WriteLine("Press any key to stop the task.");
@@ -96,6 +102,7 @@ namespace CancellingTasks
             TaskStatus taskStatus = TaskStatus.Created;
 
             // TODO Set the current task status.
+            taskStatus = task.Status;
 
             Console.WriteLine("Task status is {0}.", taskStatus);
 
@@ -105,6 +112,7 @@ namespace CancellingTasks
             Console.ReadKey();
 
             // TODO Set the current task status.
+            taskStatus = task.Status;
 
             Console.WriteLine("Task status is {0}.", taskStatus);
 
@@ -133,3 +141,4 @@ namespace CancellingTasks
         }
     }
 }
+
