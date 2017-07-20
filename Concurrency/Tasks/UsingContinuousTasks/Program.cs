@@ -1,8 +1,9 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Net;
 using System.Text;
 using System.Threading.Tasks;
+using System.Threading;
 
 namespace UsingContinuousTasks
 {
@@ -36,6 +37,7 @@ namespace UsingContinuousTasks
                 var index = i;
 
                 // TODO Create a new task and queue it to run.
+                var task = Task<int>.Factory.StartNew(() => 
                 {
                     Console.WriteLine("Task {0} is started. Downloading {1}", Task.CurrentId, urls[index]);
 
@@ -44,10 +46,13 @@ namespace UsingContinuousTasks
 
                     Console.WriteLine("Task {0} is completed.", Task.CurrentId);
 
+                    return 1;
                     // TODO Set task result.
-                };
-
+                });
+                
+                
                 // TODO Create a new task as a continuation of the web-client task. This task should run only if the previous task completed successfully.
+               task.ContinueWith(previous=>
                 {
                     Console.WriteLine("Task {0} is converting bytes to string.", Task.CurrentId);
 
@@ -55,37 +60,43 @@ namespace UsingContinuousTasks
                     byte[] bytes = null;
                     var resultString = Encoding.UTF8.GetString(bytes);
 
-                    // TODO Set task result.
-                };
+                    return 2;// TODO Set task result.
+                }, CancellationToken.None, TaskContinuationOptions.OnlyOnRanToCompletion, TaskScheduler.Default);
+
 
                 // TODO Create a new task as a continuation of the web-client task. This task should run only if the previous task failed.
+                task.ContinueWith(previous=>
                 {
                     // TODO Set Id of the previous task.
-                    int id = 0;
+                    int id = previous.Id;
 
                     // TODO Set inner exception message that happend in the previous task.
-                    string message = string.Empty;
+                    string message = previous.Exception.ToString();
 
                     Console.WriteLine("Task {0} failed with exception: {1}", id, message);
-                };
+                }, CancellationToken.None, TaskContinuationOptions.OnlyOnFaulted, TaskScheduler.Default);
 
                 // TODO Create a new task as a continuation of the get-string task. This task should run only if the previous task completed successfully.
+                task.ContinueWith(previous=>
                 {
                     Console.WriteLine("Task {0} is returning string length.", Task.CurrentId);
 
                     // TODO Set the result from the previous task.
-                    string resultString = string.Empty;
+                    string resultString = previous.Result.ToString();
 
                     var occurences = IndexesOf(resultString, Token).Length;
 
+                    return 4;
                     // TODO Set task result.
-                };
+                }, CancellationToken.None, TaskContinuationOptions.OnlyOnRanToCompletion, TaskScheduler.Default);
+                tasks[i] = task;
             }
 
             Console.WriteLine("Waiting for tasks to complete.");
             try
             {
                 // TODO Use tasks array to wait until all the tasks will complete their work.
+                Task.WaitAll(tasks);
             }
             catch
             {
